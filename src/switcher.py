@@ -3,23 +3,16 @@
 # By Andrew Grindstaff
 # Maintained by Alex Bertran (06/27/22 - Present)
 # ROS Package to switch between cameras streaming to port 5000
-# Streamer code in streamer directory at streamer.py
 
 import cv2
 import numpy as np
-import json
 import time
 import threading
 import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
+from copilot_interface.msg import controlData
 from sensor_msgs.msg import Image
-from gpio_control.srv import gpio_status
-
-# NEED TO ADD SENSOR DATA
-# Overlay and timer stack
-# Task specific visuals - overlay
-
 
 class CameraSwitcher:
     """The class for handling all the camera logic. Switches and reads the
@@ -39,33 +32,17 @@ class CameraSwitcher:
         self.change = False
         self.cap = None
 
-        try:
-            self.config = json.load(open("/home/jhsrobo/config.json"))
-        except IOError:
-            rospy.logwarn("camera_viewer: please make config.json if you want to save camera settings")
-            self.config = {}
+        # Old functionality where we had a config file. Not necessary, Cut when possible.
+        self.config = {}
 
-        self.camera_sub = rospy.Subscriber('rov/camera_select', UInt8, self.change_camera_callback)
-
-        self.temp_sub = rospy.Subscriber('rov/temp_sensor', Float32, self.change_temp_callback)
-        self.temp = 0
-
+        # Create Subscribers
+        self.camera_sub = rospy.Subscriber('/control', controlData, self.change_camera_callback)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
+        
         self.depth = 0
-
-        self.gpio_sub = rospy.Subscriber('rov/gpio_control', Int32, self.change_gpio_callback)
-        try:
-          self.gpio_service = rospy.ServiceProxy('gpio_status_server', gpio_status)
-        except rospy.ServiceException as e:
-            rospy.logerr("camera_viewer: GPIO status server not initialized. Will retry.")
-            self.gpio_service = None
-        self.electromags = {11: [False, "Left pad"],
-                           15: [False, "Right pad"]
-                           }
 
         self.camera_thread = threading.Thread(target=self.find_cameras)
         self.camera_thread.setDaemon(True)
-
         self.camera_thread.start()
 
     @property
@@ -80,10 +57,10 @@ class CameraSwitcher:
             if len(self.verified.keys()) == 0:
                 return ""
             return self.verified[self.verified.keys()[0]]
-        
+    
+    # Depth Bar Overlay Code
     def depth_calibration(self):
         return abs((self.depth - 198.3) / (893.04 / 149))
-    
     def depth_bar(self, frame):
         depthLevel = self.depth_calibration()
         # Preparing the bar
@@ -107,6 +84,7 @@ class CameraSwitcher:
         cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
         return frame
 
+    # Code for displaying most recent frame + overlay
     def read(self):
         """Reads a frame from the cv2 video capture and adds the overlay to it"""
         depthLevel = self.depth_calibration()
@@ -131,29 +109,12 @@ class CameraSwitcher:
             cv2.putText(frame, "{:.2f} ft".format(-abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
             textSize = cv2.getTextSize("{:.2f} C".format(self.temp), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
             
-            if self.temp < 60:
-                color = (0, 255, 0)
-            elif 60 <= self.temp < 80:
-                color = (0, 255, 255)
-            else:
-                color = (0, 0, 255)
-            cv2.putText(frame, "{:.2f} C".format(self.temp), (1260 - textSize[0], 80), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2, cv2.LINE_AA)
-            height = 120 + textSize[1]
-            
-            # Jesuit "Watermark"
-            textSize = cv2.getTextSize("Jesuit Robotics", cv2.FONT_HERSHEY_TRIPLEX, 1, 2)[0]
-            cv2.putText(frame, "Jesuit Robotics", (1260 - textSize[0], 705), cv2.FONT_HERSHEY_TRIPLEX, 1, (48, 18, 196), 2, cv2.LINE_AA)
-            
             # Depth Bar
             frame = self.depth_bar(frame)
-            
-            # Old code for electromagnets
-            #for x in sorted(self.electromags.values()):
-                #textSize = cv2.getTextSize("{}: {}".format(x[1], "On" if x[0] else "Off"), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
-                #cv2.putText(frame, "{}: {}".format(x[1], "On" if x[0] else "Off"), (1260 - textSize[0], height), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-                #height += textSize[1] + 20
+
             return frame
 
+    # Delay until camera IP is added to verified
     def wait(self):
         """Waits for a camera IP to be put into verified"""
         rospy.loginfo('camera_viewer: waiting for cameras - None connected')
@@ -168,36 +129,21 @@ class CameraSwitcher:
         if self.ip:
             self.cap = cv2.VideoCapture('http://{}:5000'.format(self.ip))
         else:
-            # lol something is really wrong
             rospy.logerr("camera_viwer: there is no camera at spot 1 after waiting.")
 
-    def change_camera_callback(self, camera_num):
+    # Changes cameras
+    def change_camera_callback(self, control_data):
         """ROSPY subscriber to change cameras"""
-        if not len(self.verified.keys()):
-          rospy.logerr('camera_viewer: passed a value when none are initialized')
-        elif self.num != camera_num.data:
+        if self.num != control_data.camera:
             if self.ip:
                 self.change = True
-                self.num = camera_num.data
+                self.num = control_data.camera
                 rospy.loginfo("camera_viewer: changing to camera {}".format(self.num))
 
     def change_depth_callback(self, depth):
         """ROSPY subscriber to change depth"""
         self.depth = depth.data
 
-    def change_temp_callback(self, temp):
-        """ROSPY subscriber to change temp"""
-        self.temp = temp.data
-
-    def change_gpio_callback(self, data):
-        """ROSPY subscriber to change gpio info"""
-        if self.gpio_service is None:
-            try:
-                self.gpio_service = rospy.ServiceProxy('gpio_status_server', gpio_status)
-            except rospy.ServiceException as e:
-                rospy.logerr("camera_viewer: GPIO status server not initialized. Will retry.")
-        if data.data in self.electromags:
-            self.electromags[data.data][0] = self.gpio_service(data.data).status
 
     def find_cameras(self):
         """Creates a web server on port 12345 and waits until it gets pinged"""
@@ -234,9 +180,9 @@ class CameraSwitcher:
         self.camera_thread.terminate()
         self.camera_thread.join()
 
-
+    # Renders the window
 def main():
-    rospy.init_node('pilot_page')
+    rospy.init_node('camera_feed')
     switcher = CameraSwitcher()
     switcher.wait()
 
