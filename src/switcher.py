@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Switcher.py
-# By Andrew Grindstaff
-# Maintained by Alex Bertran (06/27/22 - Present)
+# By Andrew Grindstaff '21
+# Maintained by Alex Bertran '24 (06/27/22 - Present)
 # ROS Package to switch between cameras streaming to port 5000
 
 import cv2
