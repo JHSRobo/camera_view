@@ -15,9 +15,9 @@ from copilot_interface.msg import controlData
 from sensor_msgs.msg import Image
 
 class CameraSwitcher:
-    """The class for handling all the camera logic. Switches and reads the
-    camera, adding an overlay to it.
-    """
+    #"""The class for handling all the camera logic. Switches and reads the
+    #camera, adding an overlay to it.
+    #"""
     def __init__(self):
         # self.verified is a dictionary that has keys of camera numbers and
         # values of ip addresses -
@@ -47,16 +47,16 @@ class CameraSwitcher:
 
     @property
     def ip(self):
-        """Ensures that the IP of the camera is always the correct number
-        without sacraficing redability. Otherwise, returns False
-        """
+        #"""Ensures that the IP of the camera is always the correct number
+        #without sacraficing redability. Otherwise, returns False
+        #"""
         try:
             return self.verified[self.num]
         except KeyError:
             rospy.logerr("camera_viewer: passed a camera number that doesn't exist")
             if len(self.verified.keys()) == 0:
                 return ""
-            return self.verified[self.verified.keys()[0]]
+            return self.verified[list(self.verified.keys())[0]]
     
     # Depth Bar Overlay Code
     def depth_calibration(self):
@@ -86,7 +86,7 @@ class CameraSwitcher:
 
     # Code for displaying most recent frame + overlay
     def read(self):
-        """Reads a frame from the cv2 video capture and adds the overlay to it"""
+        # """Reads a frame from the cv2 video capture and adds the overlay to it"""
         depthLevel = self.depth_calibration()
         if self.change:
             self.cap.release()
@@ -95,10 +95,9 @@ class CameraSwitcher:
 
         ret, frame = self.cap.read()
         if frame is None:
-            rospy.logerr('camera_viewer: camera failed - please wait for it to refresh or switch cameras')
             self.change = True
             return False
-        elif ret is None:
+        if ret is None:
             rospy.logwarn('camera_viewer: ret is None, can\'t display new frame')
             return False
         else:
@@ -107,8 +106,7 @@ class CameraSwitcher:
                 depthLevel = 0
             textSize = cv2.getTextSize("{:.2f} ft".format(-abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
             cv2.putText(frame, "{:.2f} ft".format(-abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            textSize = cv2.getTextSize("{:.2f} C".format(self.temp), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
-            
+            #textSize = cv2.getTextSize("{:.2f} C".format(self.temp), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]            
             # Depth Bar
             frame = self.depth_bar(frame)
 
@@ -116,7 +114,7 @@ class CameraSwitcher:
 
     # Delay until camera IP is added to verified
     def wait(self):
-        """Waits for a camera IP to be put into verified"""
+        #"""Waits for a camera IP to be put into verified"""
         rospy.loginfo('camera_viewer: waiting for cameras - None connected')
         while not self.verified:
             if rospy.is_shutdown():
@@ -133,7 +131,7 @@ class CameraSwitcher:
 
     # Changes cameras
     def change_camera_callback(self, control_data):
-        """ROSPY subscriber to change cameras"""
+        # """ROSPY subscriber to change cameras"""
         if self.num != control_data.camera:
             if self.ip:
                 self.change = True
@@ -141,20 +139,20 @@ class CameraSwitcher:
                 rospy.loginfo("camera_viewer: changing to camera {}".format(self.num))
 
     def change_depth_callback(self, depth):
-        """ROSPY subscriber to change depth"""
+        # """ROSPY subscriber to change depth"""
         self.depth = depth.data
 
 
     def find_cameras(self):
-        """Creates a web server on port 12345 and waits until it gets pinged"""
+        # """Creates a web server on port 12345 and waits until it gets pinged"""
         app = flask.Flask(__name__)
-
         @app.route('/', methods=["POST", "GET"])
         def page():
-            rospy.logdebug('camera_viewer: ping from {}'.format(flask.request.remote_addr))
-            if flask.request.remote_addr not in self.verified.values() and len(flask.request.form.keys()) > 0:
-                if flask.request.form.keys()[0] in self.config.keys():
-                    self.verified[self.config[flask.request.form.keys()[0]]] = flask.request.remote_addr
+            rospy.loginfo("find_cameras running")
+            if flask.request.remote_addr not in self.verified.values() and len(flask.request.form) > 0:
+                rospy.loginfo(list(flask.request.form.keys())[0]) #()[0] in self.config.keys())
+                if list(flask.request.form.keys())[0] in self.config.keys():
+                    self.verified[self.config[list(flask.request.form.keys())[0]]] = flask.request.remote_addr
                 else:
                     self.verified[self.give_num(flask.request.remote_addr)] = flask.request.remote_addr
                 rospy.loginfo('camera_viewer: cameras currently connected: {}'.format(self.verified))
@@ -164,7 +162,7 @@ class CameraSwitcher:
         app.run(host='0.0.0.0', port=12345)
 
     def give_num(self, ip):
-        """Gives the lowest available number to the ip"""
+        # """Gives the lowest available number to the ip"""
         if ip in self.config:
             return self.config[ip]
         else:
