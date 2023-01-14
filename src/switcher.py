@@ -2,7 +2,13 @@
 # Switcher.py
 # By Andrew Grindstaff '21
 # Maintained by Alex Bertran '24 (06/27/22 - Present)
-# ROS Package to switch between cameras streaming to port 5000
+# Rewritten by James Randall '24
+
+# Cameras run a script that streams raspivid to 192.168.1.100:5000 (Topside IP)
+# This program runs a flask app that listens on 192.168.1.100:12345
+# When cameras start up, they ping this IP address. This program detects the IP that pings that address
+  # and adds it to a list of known camera IPs.
+
 
 import cv2
 import numpy as np
@@ -14,26 +20,17 @@ from std_msgs.msg import UInt8, Float32, Int32
 from copilot_interface.msg import controlData
 from sensor_msgs.msg import Image
 
+# Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
 class CameraSwitcher:
-    #"""The class for handling all the camera logic. Switches and reads the
-    #camera, adding an overlay to it.
-    #"""
+
     def __init__(self):
-        # self.verified is a dictionary that has keys of camera numbers and
-        # values of ip addresses -
-        # self.verified = {
-        #  1: "192.168.1.101",
-        #  2: "192.168.1.102"
-        # }
+        # self.verified is a dictionary that has keys of camera numbers and values of ip addresses -
+        # self.verified = { 1: "192.168.1.101", 2: "192.168.1.102" }
         self.verified = {}
-        # self.num is an integer that represents the current camera number and
-        # is the key for self.verified
+        # self.num is an integer that represents the current camera number and is the key for self.verified
         self.num = 0
         self.change = False
         self.cap = None
-
-        # Old functionality where we had a config file. Not necessary, Cut when possible.
-        self.config = {}
 
         # Create Subscribers
         self.camera_sub = rospy.Subscriber('/control', controlData, self.change_camera_callback)
@@ -41,6 +38,9 @@ class CameraSwitcher:
         
         self.depth = 0
 
+        self.config = {}
+
+        # Initialize multithreading
         self.camera_thread = threading.Thread(target=self.find_cameras)
         self.camera_thread.setDaemon(True)
         self.camera_thread.start()
@@ -86,13 +86,13 @@ class CameraSwitcher:
 
     # Code for displaying most recent frame + overlay
     def read(self):
-        # """Reads a frame from the cv2 video capture and adds the overlay to it"""
         depthLevel = self.depth_calibration()
         if self.change:
             self.cap.release()
             self.cap = cv2.VideoCapture('http://{}:5000'.format(self.ip))
             self.change = False
 
+        # Read the most recent frame from the video stream into ret and frame
         ret, frame = self.cap.read()
         if frame is None:
             self.change = True
@@ -100,13 +100,15 @@ class CameraSwitcher:
         if ret is None:
             rospy.logwarn('camera_viewer: ret is None, can\'t display new frame')
             return False
-        else:
+        else: # If there is no error reading the last frame, add the text
+            # Add depth reading
             cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
             if depthLevel < 0.5: # Displays 0 ft when surfaced rather than weird number
                 depthLevel = 0
+            
             textSize = cv2.getTextSize("{:.2f} ft".format(-abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
             cv2.putText(frame, "{:.2f} ft".format(-abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            #textSize = cv2.getTextSize("{:.2f} C".format(self.temp), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]            
+            
             # Depth Bar
             frame = self.depth_bar(frame)
 
@@ -114,7 +116,6 @@ class CameraSwitcher:
 
     # Delay until camera IP is added to verified
     def wait(self):
-        #"""Waits for a camera IP to be put into verified"""
         rospy.loginfo('camera_viewer: waiting for cameras - None connected')
         while not self.verified:
             if rospy.is_shutdown():
@@ -122,47 +123,51 @@ class CameraSwitcher:
             rospy.logdebug('camera_viewer: still no cameras connected')
             time.sleep(1)
 
+        # Initializes first camera
         self.num = 1
-        rospy.loginfo("camera_viwer: loading capture from camera {}".format(self.num))
+        rospy.loginfo("camera_viewer: loading capture from camera {}".format(self.num))
         if self.ip:
             self.cap = cv2.VideoCapture('http://{}:5000'.format(self.ip))
         else:
             rospy.logerr("camera_viwer: there is no camera at spot 1 after waiting.")
 
-    # Changes cameras
+    # Changes cameras callback
     def change_camera_callback(self, control_data):
-        # """ROSPY subscriber to change cameras"""
+        # Checks to make sure it hasn't already selected that camera
         if self.num != control_data.camera:
             if self.ip:
                 self.change = True
                 self.num = control_data.camera
                 rospy.loginfo("camera_viewer: changing to camera {}".format(self.num))
 
+    # ROSPY subscriber to change depth
     def change_depth_callback(self, depth):
-        # """ROSPY subscriber to change depth"""
         self.depth = depth.data
 
-
+    # Creates a web server on port 12345 and waits until it gets pinged
+    # Then it adds the camera IP to self.verified
     def find_cameras(self):
-        # """Creates a web server on port 12345 and waits until it gets pinged"""
+        # Create the app
         app = flask.Flask(__name__)
+
+        # Function that runs when the app gets a connection
+
         @app.route('/', methods=["POST", "GET"])
         def page():
-            rospy.loginfo("find_cameras running")
+            # If the IP that pinged flask is not already connected, and the length of request form is not 0
             if flask.request.remote_addr not in self.verified.values() and len(flask.request.form) > 0:
-                rospy.loginfo(list(flask.request.form.keys())[0]) #()[0] in self.config.keys())
-                if list(flask.request.form.keys())[0] in self.config.keys():
-                    self.verified[self.config[list(flask.request.form.keys())[0]]] = flask.request.remote_addr
-                else:
-                    self.verified[self.give_num(flask.request.remote_addr)] = flask.request.remote_addr
+                rospy.loginfo(flask.request.remote_addr)
+                # Add the IP to self.verified
+                self.verified[self.give_num(flask.request.remote_addr)] = flask.request.remote_addr
                 rospy.loginfo('camera_viewer: cameras currently connected: {}'.format(self.verified))
             return ""
 
+        # Run the app
         rospy.loginfo('camera_viewer: camera web server online')
         app.run(host='0.0.0.0', port=12345)
 
+    # Assign number (lower possible) to new cameras in self.verified
     def give_num(self, ip):
-        # """Gives the lowest available number to the ip"""
         if ip in self.config:
             return self.config[ip]
         else:
@@ -172,8 +177,8 @@ class CameraSwitcher:
                 rospy.logerr('camera_viewer: camera detected, but there are no available numbers')
             return available
 
+    # Closes the program nicely
     def cleanup(self):
-        """Closes the camera thread and attempts to cleanup the program"""
         flask.request.environ.get('werkzeug.server.shutdown')()
         self.camera_thread.terminate()
         self.camera_thread.join()
@@ -186,7 +191,7 @@ def main():
 
     cv2.namedWindow("Camera Feed", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("Camera Feed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
-    fullscreen = False
+    fullscreen = True
     while not rospy.is_shutdown():
         frame = switcher.read()
         if cv2.waitKey(1) == ord('f'):
