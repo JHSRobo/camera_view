@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>cameras</name>
+  <name>camera_view</name>
   <version>0.0.0</version>
   <description>The pilot / camera_viewer package</description>
 
