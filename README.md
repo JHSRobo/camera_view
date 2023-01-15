@@ -4,7 +4,7 @@ Listens for a ping from cameras on 192.168.1.100:12345, and once it detects the 
 Can be launched before or after cameras have begun streaming, and more cameras can be added automatically mid session.
 
 ## Flowchart
-![alt text](https://github.com/JHSRobo/camera_view/blob/main/cameras_flowchart.png "Cameras Flowchart")
+![alt text](https://github.com/JHSRobo/camera_view/blob/main/camera_flowchart.png "Cameras Flowchart")
 
 ## Contributors
 
