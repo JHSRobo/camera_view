@@ -18,6 +18,7 @@ import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
 from copilot_interface.msg import controlData
+from copilot_interface.msg import autoControlData
 from sensor_msgs.msg import Image
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
@@ -34,9 +35,12 @@ class CameraSwitcher:
         # targeting color values
         self.lower_blue = np.array([90,50,70])
         self.upper_blue = np.array([128,255,255])
+        # enable auto dock
+        self.auto_dock = False
 
         # Create Subscribers
         self.camera_sub = rospy.Subscriber('/control', controlData, self.change_camera_callback)
+        self.auto_control_sub = rospy.Subscriber('/auto_control', autoControlData, self.enable_auto_dock)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         
         self.depth = 0
@@ -128,7 +132,8 @@ class CameraSwitcher:
             # Depth Bar
             frame = self.depth_bar(frame)
             # Targeting System
-            frame = self.docking_targeting(frame)
+            if self.auto_dock:
+              frame = self.docking_targeting(frame)
 
             return frame
 
@@ -157,6 +162,9 @@ class CameraSwitcher:
                 self.change = True
                 self.num = control_data.camera
                 rospy.loginfo("camera_viewer: changing to camera {}".format(self.num))
+                
+    def enable_auto_dock(self, auto_control_data):
+        self.auto_dock = auto_control_data.auto_dock
 
     # ROSPY subscriber to change depth
     def change_depth_callback(self, depth):
