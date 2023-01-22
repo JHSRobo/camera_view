@@ -88,6 +88,7 @@ class CameraSwitcher:
         return frame
       
     def docking_targeting(self, frame):
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask_blue = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
         contours, heirarchy = cv2.findContours(mask_blue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for c in contours:
