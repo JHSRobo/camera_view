@@ -31,6 +31,9 @@ class CameraSwitcher:
         self.num = 0
         self.change = False
         self.cap = None
+        # targeting color values
+        self.lower_blue = np.array([90,50,70])
+        self.upper_blue = np.array([128,255,255])
 
         # Create Subscribers
         self.camera_sub = rospy.Subscriber('/control', controlData, self.change_camera_callback)
@@ -83,7 +86,19 @@ class CameraSwitcher:
         pointer = np.array([pt1, pt2, pt3])
         cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
         return frame
-
+      
+    def docking_targeting(self, frame):
+        mask_blue = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
+        contours, heirarchy = cv2.findContours(mask_blue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in contours:
+            if cv2.contourArea(c) > 100:
+                M = cv2.moments(c)
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                frame = cv2.circle(frame, (cX, cY), 35, (0,0,255), 5)
+                break
+        return frame
+      
     # Code for displaying most recent frame + overlay
     def read(self):
         depthLevel = self.depth_calibration()
@@ -111,6 +126,8 @@ class CameraSwitcher:
             
             # Depth Bar
             frame = self.depth_bar(frame)
+            # Targeting System
+            frame = self.docking_targeting(frame)
 
             return frame
 
