@@ -208,9 +208,9 @@ def main():
             cv2.imshow('Camera Feed', frame)
 
             # Screenshot utility
-            if cv2.waitKey(1) == ord('p'):
-                cv2.imwrite("img/{}.png".format("name"), frame);
-
+            if cv2.waitKey(0): # == ord('p'):
+                cv2.imwrite("img/{}.png".format("name"), frame)
+                rospy.logerr("img taken")
     cv2.destroyAllWindows()
 
 
