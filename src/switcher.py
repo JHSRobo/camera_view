@@ -17,6 +17,7 @@ import threading
 import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
+from sensor_msgs.msg import Joy
 from copilot_interface.msg import controlData
 from sensor_msgs.msg import Image
 
@@ -34,7 +35,7 @@ class CameraSwitcher:
 
         # Create Subscribers
         self.camera_sub = rospy.Subscriber('/control', controlData, self.change_camera_callback)
-        self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
+        self.joy_sub = rospy.Subscriber('joystick', Joy, self.joystick_callback)
         
         self.depth = 0
 
@@ -57,32 +58,6 @@ class CameraSwitcher:
             if len(self.verified.keys()) == 0:
                 return ""
             return self.verified[list(self.verified.keys())[0]]
-    
-    # Depth Bar Overlay Code
-    def depth_calibration(self):
-        return abs((self.depth - 198.3) / (893.04 / 149))
-    def depth_bar(self, frame):
-        depthLevel = self.depth_calibration()
-        # Preparing the bar
-        cv2.line(frame, (1240, 128), (1240, 640), (48, 18, 196), 5)
-        cv2.line(frame, (1240, 128), (1190, 128), (48, 18, 196), 5)
-        cv2.line(frame, (1240, 640), (1190, 640), (48, 18, 196), 5)
-
-        # Intervals (32 pixels)
-        for i in range(16):
-            if i % 2 == 0:
-                cv2.line(frame, (1240, 608 - (i * 32)), (1215, 608 - (i * 32)), (48, 18, 196), 5)
-            else:
-                cv2.line(frame, (1240, 608 - (i * 32)), (1190, 608 - (i * 32)), (48, 18, 196), 5)
-
-        # Draw pointer
-        pt1 = (1240, (depthLevel * 32) + 128)
-        pt2 = (1190, (depthLevel * 32) + 153)
-        pt3 = (1190, (depthLevel * 32) + 103)
-
-        pointer = np.array([pt1, pt2, pt3])
-        cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
-        return frame
 
     # Code for displaying most recent frame + overlay
     def read(self):
@@ -100,19 +75,7 @@ class CameraSwitcher:
         if ret is None:
             rospy.logwarn('camera_viewer: ret is None, can\'t display new frame')
             return False
-        else: # If there is no error reading the last frame, add the text
-            # Add depth reading
-            cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            if depthLevel < 0.5: # Displays 0 ft when surfaced rather than weird number
-                depthLevel = 0
-            
-            textSize = cv2.getTextSize("{:.2f} ft".format(-abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
-            cv2.putText(frame, "{:.2f} ft".format(-abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
-            
-            # Depth Bar
-            frame = self.depth_bar(frame)
-
-            return frame
+        return frame
 
     # Delay until camera IP is added to verified
     def wait(self):
@@ -143,6 +106,13 @@ class CameraSwitcher:
     # ROSPY subscriber to change depth
     def change_depth_callback(self, depth):
         self.depth = depth.data
+
+    def joystick_callback(self, joy_data):
+        if joy_data.buttons[1]:
+            filepath = "/home/jhsrobo/ROVMIND/ros_workspace/src/camera_view/img/"
+            joy_datacv2.imwrite("{}/{}.png".format(filepath, time.time() - start), frame)
+            rospy.logerr("img taken")
+
 
     # Creates a web server on port 12345 and waits until it gets pinged
     # Then it adds the camera IP to self.verified
@@ -189,6 +159,9 @@ def main():
     switcher = CameraSwitcher()
     switcher.wait()
 
+    # Temp timer instance
+    start = time.time()
+
     cv2.namedWindow("Camera Feed", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("Camera Feed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
     fullscreen = True
@@ -208,8 +181,9 @@ def main():
             cv2.imshow('Camera Feed', frame)
 
             # Screenshot utility
-            if cv2.waitKey(0): # == ord('p'):
-                cv2.imwrite("img/{}.png".format("name"), frame)
+            if cv2.waitKey(1) == ord('p'):
+                filepath = "/home/jhsrobo/ROVMIND/ros_workspace/src/camera_view/img/"
+                cv2.imwrite("{}/{}.png".format(filepath, time.time() - start), frame)
                 rospy.logerr("img taken")
     cv2.destroyAllWindows()
 
