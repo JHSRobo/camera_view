@@ -21,6 +21,8 @@ from sensor_msgs.msg import Joy
 from copilot_interface.msg import controlData
 from sensor_msgs.msg import Image
 
+screenshot = False
+
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
 class CameraSwitcher:
 
@@ -61,13 +63,12 @@ class CameraSwitcher:
 
     # Code for displaying most recent frame + overlay
     def read(self):
-        depthLevel = self.depth_calibration()
         if self.change:
             self.cap.release()
             self.cap = cv2.VideoCapture('http://{}:5000'.format(self.ip))
             self.change = False
 
-        # Read the most recent frame from the video stream into ret and frame
+        #Read the most recent frame from the video stream into ret and frame
         ret, frame = self.cap.read()
         if frame is None:
             self.change = True
@@ -75,6 +76,7 @@ class CameraSwitcher:
         if ret is None:
             rospy.logwarn('camera_viewer: ret is None, can\'t display new frame')
             return False
+        globalframe = frame
         return frame
 
     # Delay until camera IP is added to verified
@@ -108,10 +110,11 @@ class CameraSwitcher:
         self.depth = depth.data
 
     def joystick_callback(self, joy_data):
+        global screenshot
         if joy_data.buttons[1]:
-            filepath = "/home/jhsrobo/ROVMIND/ros_workspace/src/camera_view/img/"
-            joy_datacv2.imwrite("{}/{}.png".format(filepath, time.time() - start), frame)
-            rospy.logerr("img taken")
+            screenshot = True
+        else: 
+            screenshot = False
 
 
     # Creates a web server on port 12345 and waits until it gets pinged
@@ -159,14 +162,12 @@ def main():
     switcher = CameraSwitcher()
     switcher.wait()
 
-    # Temp timer instance
-    start = time.time()
-
     cv2.namedWindow("Camera Feed", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("Camera Feed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
     fullscreen = True
     while not rospy.is_shutdown():
         frame = switcher.read()
+        globalframe = frame
         # Fullscreen utility
         if cv2.waitKey(1) == ord('f'):
             if fullscreen == True:
@@ -178,15 +179,14 @@ def main():
 
         # Read the frame
         if frame is not False:
-            cv2.imshow('Camera Feed', frame)
-
-            # Screenshot utility
-            if cv2.waitKey(1) == ord('p'):
+            cv2.imshow('Camera Feed', globalframe)
+            if screenshot:
                 filepath = "/home/jhsrobo/ROVMIND/ros_workspace/src/camera_view/img/"
-                cv2.imwrite("{}/{}.png".format(filepath, time.time() - start), frame)
-                rospy.logerr("img taken")
+                cv2.imwrite("{}/{}.png".format(filepath, time.time() - start), globalframe)
+
     cv2.destroyAllWindows()
 
-
 if __name__ == '__main__':
+    # Temp timer instance
+    start = time.time()
     main()
