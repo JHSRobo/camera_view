@@ -194,6 +194,7 @@ def main():
     fullscreen = True
     while not rospy.is_shutdown():
         frame = switcher.read()
+        # Fullscreen utility
         if cv2.waitKey(1) == ord('f'):
             if fullscreen == True:
                 cv2.setWindowProperty("Camera Feed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
@@ -201,9 +202,15 @@ def main():
             elif fullscreen == False:
                 cv2.setWindowProperty("Camera Feed", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                 fullscreen = True
+
+        # Read the frame
         if frame is not False:
             cv2.imshow('Camera Feed', frame)
-        cv2.waitKey(1)
+            
+            # Screenshot utility
+            if cv2.waitKey(1) == ord('p'):
+                cv2.imwrite("img/{}.png".format(time.asctime(time.localtime)), frame);
+
     cv2.destroyAllWindows()
 
 
