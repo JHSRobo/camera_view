@@ -206,10 +206,10 @@ def main():
         # Read the frame
         if frame is not False:
             cv2.imshow('Camera Feed', frame)
-            
+
             # Screenshot utility
             if cv2.waitKey(1) == ord('p'):
-                cv2.imwrite("img/{}.png".format(time.asctime(time.localtime)), frame);
+                cv2.imwrite("img/{}.png".format("name"), frame);
 
     cv2.destroyAllWindows()
 
