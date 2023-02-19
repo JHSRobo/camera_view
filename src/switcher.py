@@ -60,7 +60,7 @@ class CameraSwitcher:
     
     # Depth Bar Overlay Code
     def depth_calibration(self):
-        return abs((self.depth - 198.3) / (893.04 / 149))
+        return (self.depth - 1.95) * 3.28
     def depth_bar(self, frame):
         depthLevel = self.depth_calibration()
         # Preparing the bar
@@ -106,8 +106,8 @@ class CameraSwitcher:
             if depthLevel < 0.5: # Displays 0 ft when surfaced rather than weird number
                 depthLevel = 0
             
-            textSize = cv2.getTextSize("{:.2f} ft".format(-abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
-            cv2.putText(frame, "{:.2f} ft".format(-abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            textSize = cv2.getTextSize("{:.2f} ft".format(abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
+            cv2.putText(frame, "{:.2f} ft".format(abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
             
             # Depth Bar
             frame = self.depth_bar(frame)
