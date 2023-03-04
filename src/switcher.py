@@ -33,8 +33,10 @@ class CameraSwitcher:
         self.change = False
         self.cap = None
         # targeting color values
-        self.lower_blue = np.array([90,50,70])
-        self.upper_blue = np.array([128,255,255])
+        self.lower_red_first = np.array([0,70,50])
+        self.upper_red_first = np.array([10,255,255])
+        self.lower_red_second = np.array([170,70,50])
+        self.upper_red_second = np.array([180,255,255])
         # enable auto dock
         self.auto_dock = False
 
@@ -93,7 +95,9 @@ class CameraSwitcher:
       
     def docking_targeting(self, frame):
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        mask_blue = cv2.inRange(hsv_frame, self.lower_blue, self.upper_blue)
+        mask_red = cv2.inRange(hsv_frame, self.lower_red_first, self.upper_red_first)
+        mask_blue = cv2.inRange(hsv_frame, self.lower_red_second, self.upper_red_second)
+        contours, heirarchy = cv2.findContours(mask_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contours, heirarchy = cv2.findContours(mask_blue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for c in contours:
             if cv2.contourArea(c) > 100:
@@ -129,11 +133,11 @@ class CameraSwitcher:
             textSize = cv2.getTextSize("{:.2f} ft".format(-abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
             cv2.putText(frame, "{:.2f} ft".format(-abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
             
-            # Depth Bar
-            frame = self.depth_bar(frame)
             # Targeting System
             if self.auto_dock:
               frame = self.docking_targeting(frame)
+            # Depth Bar
+            frame = self.depth_bar(frame)
 
             return frame
 
