@@ -126,7 +126,7 @@ class CameraSwitcher:
             return False
         else: # If there is no error reading the last frame, add the text
             # Add depth reading
-            cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (19,185,253), 2, cv2.LINE_AA)
             if depthLevel < 0.5: # Displays 0 ft when surfaced rather than weird number
                 depthLevel = 0
             
