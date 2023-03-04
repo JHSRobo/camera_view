@@ -35,8 +35,8 @@ class CameraSwitcher:
         # targeting color values
         self.lower_red_first = np.array([0,70,50])
         self.upper_red_first = np.array([10,255,255])
-        self.lower_red_second = np.array([110,50,50]) # 170,70,50
-        self.upper_red_second = np.array([130,255,255]) # 180,255,255
+        self.lower_red_second = np.array([170,70,50])
+        self.upper_red_second = np.array([180,255,255])
         # enable auto dock
         self.auto_dock = False
 
@@ -97,8 +97,8 @@ class CameraSwitcher:
         hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask_red1 = cv2.inRange(hsv_frame, self.lower_red_first, self.upper_red_first)
         mask_red2 = cv2.inRange(hsv_frame, self.lower_red_second, self.upper_red_second)
-        contours, heirarchy = cv2.findContours(mask_red1, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours, heirarchy = cv2.findContours(mask_red2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        mask_red_combo = mask_red1 + mask_red2
+        contours, heirarchy = cv2.findContours(mask_red_combo, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for c in contours:
             if cv2.contourArea(c) > 10:
                 M = cv2.moments(c)
