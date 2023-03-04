@@ -125,17 +125,20 @@ class CameraSwitcher:
             rospy.logwarn('camera_viewer: ret is None, can\'t display new frame')
             return False
         else: # If there is no error reading the last frame, add the text
+            # Targeting System
+            if self.auto_dock:
+              frame = self.docking_targeting(frame)
+            
+            # Camera number
+            cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
+            
             # Add depth reading
-            cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (19,185,253), 2, cv2.LINE_AA)
             if depthLevel < 0.5: # Displays 0 ft when surfaced rather than weird number
                 depthLevel = 0
             
             textSize = cv2.getTextSize("{:.2f} ft".format(abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
-            cv2.putText(frame, "{:.2f} ft".format(abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            cv2.putText(frame, "{:.2f} ft".format(abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
             
-            # Targeting System
-            if self.auto_dock:
-              frame = self.docking_targeting(frame)
             # Depth Bar
             frame = self.depth_bar(frame)
 
