@@ -7,7 +7,7 @@
 # Cameras run a script that streams raspivid to 192.168.1.100:5000 (Topside IP)
 # This program runs a flask app that listens on 192.168.1.100:12345
 # When cameras start up, they ping this IP address. This program detects the IP that pings that address
-  # and adds it to a list of known camera IPs.
+# and adds it to a list of known camera IPs.
 
 
 import cv2
