@@ -17,7 +17,7 @@ import threading
 import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
-from copilot_interface.msg import controlData
+from launch_files.msg import controlData
 from sensor_msgs.msg import Image
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
