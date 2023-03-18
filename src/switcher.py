@@ -60,7 +60,7 @@ class CameraSwitcher:
     
     # Depth Bar Overlay Code
     def depth_calibration(self):
-        return (self.depth * 3.281) #- 1.95) * 3.281
+        return (self.depth * 3.28) #- 1.95) * 3.28
     def depth_bar(self, frame, depthLevel):
         # Preparing the bar
         cv2.line(frame, (1240, 128), (1240, 640), (48, 18, 196), 5)
