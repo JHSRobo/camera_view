@@ -11,14 +11,15 @@
 
 
 import cv2
-import numpy as np
+import numpy as np       
 import time
 import threading
 import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
-from copilot_interface.msg import controlData
+from sensor_msgs.msg import joy
 from sensor_msgs.msg import Image
+from camera_viewer.msg import camData 
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
 class CameraSwitcher:
@@ -31,9 +32,11 @@ class CameraSwitcher:
         self.num = 0
         self.change = False
         self.cap = None
+        self.camera_data = camData()
 
         # Create Subscribers
-        self.camera_sub = rospy.Subscriber('/control', controlData, self.change_camera_callback)
+        self.camera_sub = rospy.Subscriber('/joystick', joy, self.change_camera_callback)
+        self.camera_pub = rospy.Publisher('cameras', camData)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         
         self.depth = 0
@@ -96,7 +99,7 @@ class CameraSwitcher:
         if frame is None:
             self.change = True
             return False
-        if ret is None:
+        if ret is None:       
             rospy.logwarn('camera_viewer: ret is None, can\'t display new frame')
             return False
         else: # If there is no error reading the last frame, add the text
@@ -131,12 +134,30 @@ class CameraSwitcher:
             rospy.logerr("camera_viwer: there is no camera at spot 1 after waiting.")
 
     # Changes cameras callback
-    def change_camera_callback(self, control_data):
+    def change_camera_callback(self, joy_data):
         # Checks to make sure it hasn't already selected that camera
-        if self.num != control_data.camera:
+        cam_select = 0
+        change = False
+        self.camera_data.screenshot = False
+
+        if joy.axes[4] != 0 or joy.axes[5] != 0:
+            screenshot = True
+
+        if joy.buttons[2]:
+            cam_select = 1
+        elif joy.buttons[3]:
+            cam_select = 2
+        elif joy.buttons[4]:
+            cam_select = 3
+        elif joy.buttons[5]:
+            cam_select = 4
+
+        self.camera_data.ip = self.verified[cam_select] 
+
+        if self.num != cam_select || self.camera_data.screenshot:
             if self.ip:
-                self.change = True
-                self.num = control_data.camera
+                self.num = cam_select
+                self.camera_pub.publish(self.camera_data) # ADD HERE
                 rospy.loginfo("camera_viewer: changing to camera {}".format(self.num))
 
     # ROSPY subscriber to change depth
