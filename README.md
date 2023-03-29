@@ -11,6 +11,6 @@ Can be launched before or after cameras have begun streaming, and more cameras c
 * Current maintainers: Alex Bertran, James Randall
 
 * Contributors:
-  * Andrew Grindstaff '20 - Initial work on RPICamera
+  * Andrew Grindstaff '21 - Initial work on RPICamera
   * Alex Bertran '24 - Camera Feed Overlay
   * James Randall - Rewrite in 2022-2023 season
