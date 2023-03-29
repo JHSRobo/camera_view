@@ -18,6 +18,7 @@ import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
 from copilot_interface.msg import controlData
+from copilot_interface.msg import autoControlData
 from sensor_msgs.msg import Image
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
@@ -31,9 +32,17 @@ class CameraSwitcher:
         self.num = 0
         self.change = False
         self.cap = None
+        # targeting color values
+        self.lower_red_first = np.array([0,70,50])
+        self.upper_red_first = np.array([10,255,255])
+        self.lower_red_second = np.array([170,70,50])
+        self.upper_red_second = np.array([180,255,255])
+        # enable auto dock
+        self.auto_dock = False
 
         # Create Subscribers
         self.camera_sub = rospy.Subscriber('/control', controlData, self.change_camera_callback)
+        self.auto_control_sub = rospy.Subscriber('/auto_control', autoControlData, self.enable_auto_dock)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         
         self.depth = 0
@@ -61,6 +70,7 @@ class CameraSwitcher:
     # Depth Bar Overlay Code
     def depth_calibration(self):
         return (self.depth * 3.281) #- 1.95) * 3.281
+        
     def depth_bar(self, frame, depthLevel):
         # Preparing the bar
         cv2.line(frame, (1240, 128), (1240, 640), (48, 18, 196), 5)
@@ -82,7 +92,22 @@ class CameraSwitcher:
         pointer = np.array([pt1, pt2, pt3])
         cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
         return frame
-
+      
+    def docking_targeting(self, frame):
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask_red1 = cv2.inRange(hsv_frame, self.lower_red_first, self.upper_red_first)
+        mask_red2 = cv2.inRange(hsv_frame, self.lower_red_second, self.upper_red_second)
+        mask_red_combo = mask_red1 + mask_red2
+        contours, heirarchy = cv2.findContours(mask_red_combo, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in contours:
+            if cv2.contourArea(c) > 10:
+                M = cv2.moments(c)
+                cX = int(M["m10"] / M["m00"])
+                cY = int(M["m01"] / M["m00"])
+                frame = cv2.circle(frame, (cX, cY), 35, (0,0,255), 5)
+                break
+        return frame
+      
     # Code for displaying most recent frame + overlay
     def read(self):
         depthLevel = self.depth_calibration()
@@ -100,8 +125,14 @@ class CameraSwitcher:
             rospy.logwarn('camera_viewer: ret is None, can\'t display new frame')
             return False
         else: # If there is no error reading the last frame, add the text
+            # Targeting System
+            if self.auto_dock:
+              frame = self.docking_targeting(frame)
+            
+            # Camera number
+            cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
+            
             # Add depth reading
-            cv2.putText(frame, str(self.num), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
             if depthLevel < 0.5: # Displays 0 ft when surfaced rather than weird number
                 depthLevel = 0
             
@@ -138,6 +169,9 @@ class CameraSwitcher:
                 self.change = True
                 self.num = control_data.camera
                 rospy.loginfo("camera_viewer: changing to camera {}".format(self.num))
+                
+    def enable_auto_dock(self, auto_control_data):
+        self.auto_dock = auto_control_data.auto_dock
 
     # ROSPY subscriber to change depth
     def change_depth_callback(self, depth):
