@@ -155,12 +155,17 @@ class CameraSwitcher:
         elif joy_data.buttons[5]:
             cam_select = 4
 
-        try: self.camera_data.ip = self.verified[cam_select] 
-        except: return
+        try: self.camera_data.ip = self.verified[cam_select]  
+        except: 
+            if self.camera_data.screenshot: pass
+            else: return
+
+        rospy.logwarn(self.camera_data.screenshot)
         if self.num != cam_select or self.camera_data.screenshot:
+            self.camera_pub.publish(self.camera_data)
             if self.ip:
                 self.num = cam_select
-                self.camera_pub.publish(self.camera_data) # ADD HERE
+                self.change= True
                 rospy.loginfo("camera_viewer: changing to camera {}".format(self.num))
 
     # ROSPY subscriber to change depth
