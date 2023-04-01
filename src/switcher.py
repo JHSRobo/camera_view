@@ -104,8 +104,10 @@ class CameraSwitcher:
                 M = cv2.moments(c)
                 cX = int(M["m10"] / M["m00"])
                 cY = int(M["m01"] / M["m00"])
-                frame = cv2.circle(frame, (cX, cY), 35, (0,0,255), 5)
-                break
+                if cX >= 520 and cX <= 1400 and cY >= 140 and cY <= 940:
+                    frame = cv2.circle(frame, (cX, cY), 35, (0,0,255), 5)
+                    break
+        frame = cv2.rectangle(frame, (520, 140), (1400, 940), (0,255,0), 2)
         return frame
       
     # Code for displaying most recent frame + overlay
