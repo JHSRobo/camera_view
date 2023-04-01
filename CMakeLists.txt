@@ -9,8 +9,8 @@ project(camera_view)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
-  std_msgs
   message_generation
+  std_msgs
   sensor_msgs
 )
 
