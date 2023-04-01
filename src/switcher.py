@@ -17,9 +17,9 @@ import threading
 import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
-from sensor_msgs.msg import joy
+from sensor_msgs.msg import Joy
 from sensor_msgs.msg import Image
-from camera_viewer.msg import camData 
+from camera_view.msg import camData 
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
 class CameraSwitcher:
@@ -35,8 +35,8 @@ class CameraSwitcher:
         self.camera_data = camData()
 
         # Create Subscribers
-        self.camera_sub = rospy.Subscriber('/joystick', joy, self.change_camera_callback)
-        self.camera_pub = rospy.Publisher('cameras', camData)
+        self.camera_sub = rospy.Subscriber('/joystick', Joy, self.change_camera_callback)
+        self.camera_pub = rospy.Publisher('cameras', camData, queue_size= 1)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         
         self.depth = 0
@@ -129,6 +129,9 @@ class CameraSwitcher:
         self.num = 1
         rospy.loginfo("camera_viewer: loading capture from camera {}".format(self.num))
         if self.ip:
+            self.camera_data.screenshot = False
+            self.camera_data.ip = self.ip
+            self.camera_pub.publish(self.camera_data)
             self.cap = cv2.VideoCapture('http://{}:5000'.format(self.ip))
         else:
             rospy.logerr("camera_viwer: there is no camera at spot 1 after waiting.")
@@ -136,25 +139,25 @@ class CameraSwitcher:
     # Changes cameras callback
     def change_camera_callback(self, joy_data):
         # Checks to make sure it hasn't already selected that camera
-        cam_select = 0
+        cam_select = False
         change = False
         self.camera_data.screenshot = False
 
-        if joy.axes[4] != 0 or joy.axes[5] != 0:
-            screenshot = True
+        if joy_data.axes[4] != 0 or joy_data.axes[5] != 0:
+            self.camera_data.screenshot = True
 
-        if joy.buttons[2]:
+        if joy_data.buttons[2]:
             cam_select = 1
-        elif joy.buttons[3]:
+        elif joy_data.buttons[3]:
             cam_select = 2
-        elif joy.buttons[4]:
+        elif joy_data.buttons[4]:
             cam_select = 3
-        elif joy.buttons[5]:
+        elif joy_data.buttons[5]:
             cam_select = 4
 
-        self.camera_data.ip = self.verified[cam_select] 
-
-        if self.num != cam_select || self.camera_data.screenshot:
+        try: self.camera_data.ip = self.verified[cam_select] 
+        except: return
+        if self.num != cam_select or self.camera_data.screenshot:
             if self.ip:
                 self.num = cam_select
                 self.camera_pub.publish(self.camera_data) # ADD HERE
