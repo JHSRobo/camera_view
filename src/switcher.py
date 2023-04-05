@@ -161,7 +161,7 @@ class CameraSwitcher:
             else: return
 
         rospy.logwarn(self.camera_data.screenshot)
-        if self.num != cam_select or self.camera_data.screenshot:
+        if (self.num != cam_select or self.camera_data.screenshot) && self.num != 0:
             self.camera_pub.publish(self.camera_data)
             if self.ip:
                 self.num = cam_select
