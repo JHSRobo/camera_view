@@ -35,7 +35,7 @@ class CameraSwitcher:
         self.camera_data = camData()
 
         # Create Subscribers
-        self.camera_sub = rospy.Subscriber('/joystick', Joy, self.change_camera_callback)
+        self.camera_sub = rospy.Subscriber('joystick', Joy, self.change_camera_callback)
         self.camera_pub = rospy.Publisher('cameras', camData, queue_size= 1)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         
