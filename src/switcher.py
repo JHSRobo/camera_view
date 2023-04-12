@@ -106,7 +106,7 @@ class CameraSwitcher:
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
             if cX >= 320 and cX <= 960 and cY >= 180 and cY <= 540:
-                if cv2.countourArea(c) > biggest:
+                if cv2.contourArea(c) > biggest:
                     biggest = cv2.contourArea(c)
         frame = cv2.circle(frame, (cX, cY), 35, (0,0,255), 5)
         frame = cv2.rectangle(frame, (320, 180), (960, 540), (19,185,253), 2)
