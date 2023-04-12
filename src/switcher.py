@@ -101,6 +101,7 @@ class CameraSwitcher:
         contours, heirarchy = cv2.findContours(mask_red_combo, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         biggest = 0
         for c in contours:
+          if cv2.contourArea(c) > 10:
             M = cv2.moments(c)
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
