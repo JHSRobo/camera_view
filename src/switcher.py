@@ -99,9 +99,9 @@ class CameraSwitcher:
         mask_red2 = cv2.inRange(hsv_frame, self.lower_red_second, self.upper_red_second)
         mask_red_combo = mask_red1 + mask_red2
         contours, heirarchy = cv2.findContours(mask_red_combo, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        biggestC = -100
-        biggestX = -100
-        biggestY = -100
+        biggestC = 0
+        biggestX = 0
+        biggestY = 0
         for c in contours:
           if cv2.contourArea(c) > 10:
             M = cv2.moments(c)
@@ -112,7 +112,8 @@ class CameraSwitcher:
                     biggestC = cv2.contourArea(c)
                     biggestX = cX
                     biggestY = cY
-        frame = cv2.circle(frame, (biggestX, biggestY), 35, (0,0,255), 5)
+        if biggestC > 0:
+          frame = cv2.circle(frame, (biggestX, biggestY), 35, (0,0,255), 5)
         frame = cv2.rectangle(frame, (320, 180), (960, 540), (19,185,253), 2)
         return frame
       
