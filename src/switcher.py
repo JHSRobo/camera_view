@@ -33,9 +33,9 @@ class CameraSwitcher:
         self.change = False
         self.cap = None
         # targeting color values
-        self.lower_red_first = np.array([0,70,50])
+        self.lower_red_first = np.array([0,70,10])
         self.upper_red_first = np.array([10,255,255])
-        self.lower_red_second = np.array([170,70,50])
+        self.lower_red_second = np.array([170,70,10])
         self.upper_red_second = np.array([180,255,255])
         # enable auto dock
         self.auto_dock = False
@@ -113,7 +113,7 @@ class CameraSwitcher:
                     biggestX = cX
                     biggestY = cY
         if biggestC > 0:
-          frame = cv2.circle(frame, (biggestX, biggestY), 35, (0,0,255), 5)
+          frame = cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.5), (0,0,255), 5)
         frame = cv2.rectangle(frame, (320, 180), (960, 540), (19,185,253), 2)
         return frame
       
