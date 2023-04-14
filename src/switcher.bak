@@ -34,6 +34,7 @@ class CameraSwitcher:
         self.change = False
         self.cap = None
         self.camera_data = camData()
+        self.screenshot = False
         self.image = None
         self.bridge = CvBridge()
 
@@ -51,6 +52,10 @@ class CameraSwitcher:
         self.camera_thread.setDaemon(True)
         self.camera_thread.start()
         
+        self.screenshot_thread = threading.Thread(target=self.publish_screenshot)
+        self.screenshot_thread.setDaemon(True)
+        self.screenshot_thread.start()
+
     @property
     def ip(self):
         #"""Ensures that the IP of the camera is always the correct number
@@ -143,7 +148,7 @@ class CameraSwitcher:
     def publish_screenshot(self):
         if self.screenshot:
             try: 
-                self.image = self.bridge.cv2_to_imgmsg(self.image, encoding="passthrough")
+                self.image = self.bridge.cv2_to_imgsmg(self.image, encoding="passthrough")
                 self.image_pub.publish(self.image)
             except: pass
             self.screenshot = False
@@ -171,10 +176,9 @@ class CameraSwitcher:
         except: 
             if self.camera_data.screenshot: pass
             else: return
-        
+
         if self.camera_data.screenshot:
-                self.image = self.bridge.cv2_to_imgmsg(self.image, encoding="passthrough")
-                self.image_pub.publish(self.image)
+            self.screenshot = True
 
         if self.num != cam_select and self.num != 0:
             if self.ip:
