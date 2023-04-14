@@ -98,7 +98,7 @@ class CameraSwitcher:
 
         # Read the most recent frame from the video stream into ret and frame
         ret, frame = self.cap.read()
-        self.image = frame
+        net, self.image = self.cap.read()
         if frame is None:
             self.change = True
             return False
@@ -139,13 +139,6 @@ class CameraSwitcher:
         else:
             rospy.logerr("camera_viwer: there is no camera at spot 1 after waiting.")
 
-    def publish_screenshot(self):
-        if self.screenshot:
-            try: 
-                self.image = self.bridge.cv2_to_imgmsg(self.image, encoding="passthrough")
-                self.image_pub.publish(self.image)
-            except: pass
-            self.screenshot = False
 
     # Changes cameras callback
     def change_camera_callback(self, joy_data):
