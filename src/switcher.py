@@ -36,7 +36,7 @@ class CameraSwitcher:
 
         # Create Subscribers
         self.camera_sub = rospy.Subscriber('joystick', Joy, self.change_camera_callback)
-        self.image_pub = rospy.Publisher('screenshots', Images, queue_size = 1)
+        self.image_pub = rospy.Publisher('screenshots', Image, queue_size = 1)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         
         self.depth = 0
@@ -164,7 +164,7 @@ class CameraSwitcher:
             image_pub.publish(img)
 
         rospy.logwarn(self.camera_data.screenshot)
-        if (self.num != cam_select or self.camera_data.screenshot) && self.num != 0:
+        if (self.num != cam_select or self.camera_data.screenshot) and self.num != 0:
             if self.ip:
                 self.num = cam_select
                 self.change= True
