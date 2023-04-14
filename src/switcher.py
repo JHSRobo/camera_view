@@ -17,7 +17,7 @@ import threading
 import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
-from sensor_msgs.msg import Joy
+from sensor_msgs.msg import Joy, Image
 from sensor_msgs.msg import Image
 from camera_view.msg import camData 
 
@@ -36,7 +36,7 @@ class CameraSwitcher:
 
         # Create Subscribers
         self.camera_sub = rospy.Subscriber('joystick', Joy, self.change_camera_callback)
-        self.camera_pub = rospy.Publisher('cameras', camData, queue_size= 1)
+        self.image_pub = rospy.Publisher('screenshots', Images, queue_size = 1)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         
         self.depth = 0
@@ -131,7 +131,6 @@ class CameraSwitcher:
         if self.ip:
             self.camera_data.screenshot = False
             self.camera_data.ip = self.ip
-            self.camera_pub.publish(self.camera_data)
             self.cap = cv2.VideoCapture('http://{}:5000'.format(self.ip))
         else:
             rospy.logerr("camera_viwer: there is no camera at spot 1 after waiting.")
@@ -160,9 +159,12 @@ class CameraSwitcher:
             if self.camera_data.screenshot: pass
             else: return
 
+        if self.camera_data.screenshot:
+            img = switcher.read()
+            image_pub.publish(img)
+
         rospy.logwarn(self.camera_data.screenshot)
         if (self.num != cam_select or self.camera_data.screenshot) && self.num != 0:
-            self.camera_pub.publish(self.camera_data)
             if self.ip:
                 self.num = cam_select
                 self.change= True
