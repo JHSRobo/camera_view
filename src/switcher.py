@@ -18,7 +18,6 @@ import flask
 import rospy
 from std_msgs.msg import UInt8, Float32, Int32
 from sensor_msgs.msg import Joy, Image
-from sensor_msgs.msg import Image
 from camera_view.msg import camData 
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
