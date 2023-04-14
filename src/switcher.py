@@ -171,9 +171,11 @@ class CameraSwitcher:
             if self.camera_data.screenshot: pass
             else: return
 
-        if self.camera_data.screenshot and type(self.image == "<class 'numpy.ndarray'>"):
-            self.image = self.bridge.cv2_to_imgmsg(self.image, encoding="passthrough")
-            self.image_pub.publish(self.image)
+        if self.camera_data.screenshot:
+            try:
+                self.image = self.bridge.cv2_to_imgmsg(self.image, encoding="passthrough")
+                self.image_pub.publish(self.image)
+            except: pass
 
         if self.num != cam_select and self.num != 0:
             if self.ip:
