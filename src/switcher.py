@@ -113,7 +113,9 @@ class CameraSwitcher:
                     biggestX = cX
                     biggestY = cY
         if biggestC > 0:
-          frame = cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.5), (0,0,255), 5)
+          cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.5), (0,0,255), 5)
+          cv2.putText(frame, "Area: {} pixels".format(biggestC), (320, 160), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+          cv2.putText(frame, "Error: {}X {}Y".format(640 - biggestX, 360 - biggestY), (320, 160), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
         frame = cv2.rectangle(frame, (320, 180), (960, 540), (19,185,253), 2)
         return frame
       
