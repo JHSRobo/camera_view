@@ -23,6 +23,7 @@ from sensor_msgs.msg import Joy, Image
 from camera_view.msg import camData 
 from copilot_interface.msg import controlData
 from copilot_interface.msg import autoControlData
+from rov_control.msg import autoDock
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
 class CameraSwitcher:
@@ -53,8 +54,15 @@ class CameraSwitcher:
         self.camera_sub = rospy.Subscriber('joystick', Joy, self.change_camera_callback)
         self.image_pub = rospy.Publisher('screenshots', Image, queue_size = 1)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
+        self.auto_dock_pub = rospy.Publisher('auto_dock_data', autoDock, queue_size = 3)
         
         self.depth = 0
+        
+        # Auto Docking Data (for publishing)
+        self.ad_msg = autoDock()
+        self.ad_msg.ad_x_error = 0
+        self.ad_msg.ad_y_error = 0
+        self.ad_msg.ad_proximity = 0
 
         self.config = {}
 
@@ -122,9 +130,15 @@ class CameraSwitcher:
                     biggestX = cX
                     biggestY = cY
         if biggestC > 0:
+          self.ad_msg.ad_x_error = int(640 - biggestX)
+          self.ad_msg.ad_y_error = int(360 - biggestY)
+          self.ad_msg.ad_proximity = int(biggestC)
+          
           cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.5), (0,0,255), 5)
-          cv2.putText(frame, "Area: {} pixels".format(biggestC), (320, 170), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
-          cv2.putText(frame, "Error: {}X {}Y".format(640 - biggestX, 360 - biggestY), (320, 570), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+          cv2.putText(frame, "Area: {} pixels".format(self.ad_msg.ad_proximity), (320, 170), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+          cv2.putText(frame, "Error: {}X {}Y".format(self.ad_msg.ad_x_error, self.ad_msg.ad_y_error), (320, 570), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+          
+          self.auto_dock_pub.publish(self.ad_msg)
         frame = cv2.rectangle(frame, (320, 180), (960, 540), (19,185,253), 2)
         return frame
       
