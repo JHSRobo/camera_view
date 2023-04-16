@@ -114,12 +114,13 @@ class CameraSwitcher:
       
     def docking_targeting(self, frame):
         inverted = cv2.bitwise_not(frame)
-        hsv_frame = cv2.cvtColor(inverted, cv2.COLOR_BGR2HSV)
+        hsv_white_frame = cv2.cvtColor(inverted, cv2.COLOR_BGR2HSV)
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         mask_red1 = cv2.inRange(hsv_frame, self.lower_red_first, self.upper_red_first)
         mask_red2 = cv2.inRange(hsv_frame, self.lower_red_second, self.upper_red_second)
-        mask_white = cv2.inRange(hsv_frame, self.lower_white, self.upper_white)
-        mask_red_combo = mask_red1 + mask_red2 + mask_white
-        contours, heirarchy = cv2.findContours(mask_red_combo, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        mask_white = cv2.inRange(hsv_white_frame, self.lower_white, self.upper_white)
+        mask_combo = mask_red1 + mask_red2 + mask_white
+        contours, heirarchy = cv2.findContours(mask_combo, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         biggestC = 0
         biggestX = 0
         biggestY = 0
