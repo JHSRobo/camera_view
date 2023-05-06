@@ -134,7 +134,7 @@ class CameraSwitcher:
         biggestX = 0
         biggestY = 0
         for c in contours:
-          if cv2.contourArea(c) > 10:
+          if cv2.contourArea(c) > 1:
             M = cv2.moments(c)
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
@@ -144,12 +144,13 @@ class CameraSwitcher:
                     biggestX = cX
                     biggestY = cY
         if biggestC > 0:
-          self.ad_msg.ad_x_error = int(640 - biggestX)
-          self.ad_msg.ad_y_error = int(360 - biggestY)
-          self.ad_msg.ad_proximity = int(biggestC)
+          # Proximity calculated with line of best fit from multiple data points (area vs distance)
+          self.ad_msg.ad_proximity = int(((261267000 / ((1000 * int(biggestC)) + 376387)) ** (7235 / 12894)) * 2.54)
+          self.ad_msg.ad_x_error = int((640 - biggestX) * (self.ad_msg.ad_proximity / 100))
+          self.ad_msg.ad_y_error = int((360 - biggestY) * (self.ad_msg.ad_proximity / 100))
           
-          cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.5), (0,0,255), 5)
-          cv2.putText(frame, "Area: {} pixels".format(self.ad_msg.ad_proximity), (320, 170), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+          cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.45), (0,0,255), 5)
+          cv2.putText(frame, "Proximity: {} centimeters".format(self.ad_msg.ad_proximity), (320, 170), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
           cv2.putText(frame, "Error: {}X {}Y".format(self.ad_msg.ad_x_error, self.ad_msg.ad_y_error), (320, 570), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
           
           self.auto_dock_pub.publish(self.ad_msg)
