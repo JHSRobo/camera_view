@@ -146,7 +146,7 @@ class CameraSwitcher:
         if biggestC > 0:
           # Proximity calculated with line of best fit from multiple data points (area vs distance)
           self.ad_msg.ad_proximity = int(((261267000 / ((1000 * int(biggestC)) + 376387)) ** (7235 / 12894)) * 2.54)
-          self.ad_msg.ad_x_error = int((640 - biggestX) * (self.ad_msg.ad_proximity / 100))
+          self.ad_msg.ad_x_error = -(int((640 - biggestX) * (self.ad_msg.ad_proximity / 100)))
           self.ad_msg.ad_y_error = int((360 - biggestY) * (self.ad_msg.ad_proximity / 100))
           
           cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.45), (0,0,255), 5)
