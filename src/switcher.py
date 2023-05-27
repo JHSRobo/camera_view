@@ -24,6 +24,7 @@ from camera_view.msg import camData
 from copilot_interface.msg import controlData
 from copilot_interface.msg import autoControlData
 from rov_control.msg import autoDock
+from rov_control.msg import thrusterPercents
 
 # Class for holding all the camera logic. Switches and reads the camera, adding an overlay to it.
 class CameraSwitcher:
@@ -57,6 +58,7 @@ class CameraSwitcher:
         self.image_pub = rospy.Publisher('screenshots', Image, queue_size = 1)
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         self.auto_dock_pub = rospy.Publisher('auto_dock_data', autoDock, queue_size = 3)
+        self.throttle_sub = rospy.Subscriber('thrusters', thrusterPercents, self.throttle_callback)
         
         self.depth = 0
         self.target_depth = 0
@@ -67,6 +69,8 @@ class CameraSwitcher:
         self.ad_msg.ad_x_error = 0
         self.ad_msg.ad_y_error = 0
         self.ad_msg.ad_proximity = 0
+        
+        self.rov_throttle = 0
 
         self.config = {}
 
@@ -120,7 +124,25 @@ class CameraSwitcher:
         cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
 
         return frame
+    
+    def throttle_bar(self, frame):
+      tempThrottle = abs(self.rov_throttle - 1000)
       
+      cv2.line(frame, (40,128), (40, 640), (48, 18, 196), 5)
+      cv2.line(frame, (40,128), (90, 128), (48, 18, 196), 5)
+      cv2.line(frame, (40,640), (90, 640), (48, 18, 196), 5)
+      cv2.line(frame, (40,384), (90, 384), (48, 18, 196), 5)
+      
+      pt1 = (40, int(tempThrottle * 0.256) + 128)
+      pt2 = (90, int(tempThrottle * 0.256) + 153)
+      pt3 = (90, int(tempThrottle * 0.256) + 103)
+      pointer = np.array([pt1, pt2, pt3])
+      
+      if not self.dh_enable:
+        cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
+      else:
+        cv2.drawContours(frame, [pointer.astype(int)], 0, (255,0,0), -1)
+    
     def docking_targeting(self, frame):
         inverted = cv2.bitwise_not(frame)
         hsv_white_frame = cv2.cvtColor(inverted, cv2.COLOR_BGR2HSV)
@@ -156,7 +178,11 @@ class CameraSwitcher:
           self.auto_dock_pub.publish(self.ad_msg)
         frame = cv2.rectangle(frame, (320, 180), (960, 540), (19,185,253), 2)
         return frame
-      
+    
+    # Get vertical thrust from throttle
+    def throttle_callback(self, data):
+      self.rov_throttle = data.t5
+    
     # Code for displaying most recent frame + overlay
     def read(self):
         depthLevel = self.depth_calibration()
@@ -191,6 +217,7 @@ class CameraSwitcher:
             
             # Depth Bar
             frame = self.depth_bar(frame, depthLevel)
+            frame = self.throttle_bar(frame)
 
             return frame
 
