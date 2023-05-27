@@ -126,7 +126,7 @@ class CameraSwitcher:
         return frame
     
     def throttle_bar(self, frame):
-      tempThrottle = abs(self.rov_throttle - 1000)
+      tempThrottle = abs(self.rov_throttle + 1000)
       
       cv2.line(frame, (40,128), (40, 640), (48, 18, 196), 5)
       cv2.line(frame, (40,128), (90, 128), (48, 18, 196), 5)
@@ -142,6 +142,7 @@ class CameraSwitcher:
         cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
       else:
         cv2.drawContours(frame, [pointer.astype(int)], 0, (255,0,0), -1)
+      return frame
     
     def docking_targeting(self, frame):
         inverted = cv2.bitwise_not(frame)
