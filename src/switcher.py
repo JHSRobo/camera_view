@@ -59,6 +59,8 @@ class CameraSwitcher:
         self.auto_dock_pub = rospy.Publisher('auto_dock_data', autoDock, queue_size = 3)
         
         self.depth = 0
+        self.target_depth = 0
+        self.dh_enable = False
         
         # Auto Docking Data (for publishing)
         self.ad_msg = autoDock()
@@ -103,6 +105,12 @@ class CameraSwitcher:
             else:
                 cv2.line(frame, (1240, 608 - (i * 32)), (1190, 608 - (i * 32)), (48, 18, 196), 5)
 
+        # Draw target depth
+        if self.dh_enable:
+            cv2.line(frame, (1190, int(self.target_depth * 32) + 128), (1240, int(self.target_depth * 32) + 128), (255,0,0), 5)
+            cv2.putText(frame, "Target", (1085, int(self.target_depth * 32) + 135), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+
+
         # Draw pointer
         pt1 = (1240, (depthLevel * 32) + 128)
         pt2 = (1190, (depthLevel * 32) + 153)
@@ -110,6 +118,7 @@ class CameraSwitcher:
 
         pointer = np.array([pt1, pt2, pt3])
         cv2.drawContours(frame, [pointer.astype(int)], 0, (19,185,253), -1)
+
         return frame
       
     def docking_targeting(self, frame):
@@ -125,7 +134,7 @@ class CameraSwitcher:
         biggestX = 0
         biggestY = 0
         for c in contours:
-          if cv2.contourArea(c) > 10:
+          if cv2.contourArea(c) > 1:
             M = cv2.moments(c)
             cX = int(M["m10"] / M["m00"])
             cY = int(M["m01"] / M["m00"])
@@ -135,12 +144,13 @@ class CameraSwitcher:
                     biggestX = cX
                     biggestY = cY
         if biggestC > 0:
-          self.ad_msg.ad_x_error = int(640 - biggestX)
-          self.ad_msg.ad_y_error = int(360 - biggestY)
-          self.ad_msg.ad_proximity = int(biggestC)
+          # Proximity calculated with line of best fit from multiple data points (area vs distance)
+          self.ad_msg.ad_proximity = int(((261267000 / ((1000 * int(biggestC)) + 376387)) ** (7235 / 12894)) * 2.54)
+          self.ad_msg.ad_x_error = -(int((640 - biggestX) * (self.ad_msg.ad_proximity / 100)))
+          self.ad_msg.ad_y_error = int((360 - biggestY) * (self.ad_msg.ad_proximity / 100))
           
-          cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.5), (0,0,255), 5)
-          cv2.putText(frame, "Area: {} pixels".format(self.ad_msg.ad_proximity), (320, 170), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+          cv2.circle(frame, (biggestX, biggestY), int(biggestC ** 0.45), (0,0,255), 5)
+          cv2.putText(frame, "Proximity: {} centimeters".format(self.ad_msg.ad_proximity), (320, 170), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
           cv2.putText(frame, "Error: {}X {}Y".format(self.ad_msg.ad_x_error, self.ad_msg.ad_y_error), (320, 570), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
           
           self.auto_dock_pub.publish(self.ad_msg)
@@ -242,6 +252,8 @@ class CameraSwitcher:
                 
     def enable_auto_dock(self, auto_control_data):
         self.auto_dock = auto_control_data.auto_dock
+        self.dh_enable = auto_control_data.dh_status
+        self.target_depth = auto_control_data.target_depth
 
     # ROSPY subscriber to change depth
     def change_depth_callback(self, depth):
