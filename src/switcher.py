@@ -17,7 +17,7 @@ import threading
 import flask
 import rospy
 from cv_bridge import CvBridge
-from std_msgs.msg import UInt8, Float32, Int32
+from std_msgs.msg import UInt8, Float32, Int32, Bool
 
 from sensor_msgs.msg import Joy, Image
 from camera_view.msg import camData 
