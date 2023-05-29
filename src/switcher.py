@@ -59,6 +59,7 @@ class CameraSwitcher:
         self.depth_sub = rospy.Subscriber('rov/depth_sensor', Float32, self.change_depth_callback)
         self.auto_dock_pub = rospy.Publisher('auto_dock_data', autoDock, queue_size = 3)
         self.throttle_sub = rospy.Subscriber('thrusters', thrusterPercents, self.throttle_callback)
+        self.leak_detect_sub = rospy.Subscriber('leak_detect', Bool, self.leak_callback)
         
         self.depth = 0
         self.target_depth = 0
@@ -71,6 +72,7 @@ class CameraSwitcher:
         self.ad_msg.ad_proximity = 0
         
         self.rov_throttle = 0
+        self.is_leaking = False
 
         self.config = {}
 
@@ -184,6 +186,9 @@ class CameraSwitcher:
     def throttle_callback(self, data):
       self.rov_throttle = data.t5
     
+    def leak_callback(self, status):
+      self.is_leaking = status.data
+    
     # Code for displaying most recent frame + overlay
     def read(self):
         depthLevel = self.depth_calibration()
@@ -216,7 +221,12 @@ class CameraSwitcher:
             textSize = cv2.getTextSize("{:.2f} ft".format(abs(depthLevel)), cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
             cv2.putText(frame, "{:.2f} ft".format(abs(depthLevel)), (1260 - textSize[0], 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
             
-            # Depth Bar
+            # Leak Detected Message
+            if self.is_leaking:
+              textSize = cv2.getTextSize("LEAK DETECTED", cv2.FONT_HERSHEY_COMPLEX, 1, 2)[0]
+              cv2.putText(frame, "LEAK DETECTED", (640 - int(textSize[0] / 2), 360), cv2.FONT_HERSHEY_COMPLEX, 1, (0,0,255), 2, cv2.LINE_AA)
+            
+            # Depth and Throttle Bar
             frame = self.depth_bar(frame, depthLevel)
             frame = self.throttle_bar(frame)
 
