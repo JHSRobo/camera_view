@@ -45,7 +45,7 @@ class CameraSwitcher:
         self.config = {}
 
         try:
-            self.config = json.load(open("/home/jhsrobo/ROVMIND/ros_workspace/src/config.json"))
+            self.config = json.load(open("/home/jhsrobo/ROVMIND/ros_workspace/src/camera_view/config.json"))
         except IOError:
             rospy.logwarn("camera_viewer: please make config.json if you want to save camera settings")
             self.config = {}
