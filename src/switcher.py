@@ -11,6 +11,7 @@
 
 
 import cv2
+import json
 import numpy as np       
 import time
 import threading
@@ -75,6 +76,12 @@ class CameraSwitcher:
         self.is_leaking = False
 
         self.config = {}
+
+        try:
+            self.config = json.load(open("/home/jhsrobo/ROVMIND/ros_workspace/src/camera_view/config.json"))
+        except IOError:
+            rospy.logwarn("camera_viewer: please make config.json if you want to save camera settings")
+            self.config = {}
 
         # Initialize multithreading
         self.camera_thread = threading.Thread(target=self.find_cameras)
